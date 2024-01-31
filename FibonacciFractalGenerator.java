@@ -6,9 +6,10 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 public class FibonacciFractalGenerator {
-
+    private static final double GOLDEN_RATIO = (1 + Math.sqrt(5)) / 2; // Phi
     private static final int WIDTH = 2000;
     private static final int HEIGHT = 2000;
     private BufferedImage image = new BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_RGB);
@@ -17,7 +18,40 @@ public class FibonacciFractalGenerator {
         int numThreads = Runtime.getRuntime().availableProcessors();
         ExecutorService executor = Executors.newFixedThreadPool(numThreads);
 
-        int[] fibonacci = calculateFibonacci(maxElement + 1);
+        int[] fibonacci = new int[maxElement];
+        //int[] fibonacci2 = calculateFibonacci(maxElement);
+       
+        int threadGroupSize = maxElement / numThreads;
+        Future<?>[] futureFibTasks = new Future[numThreads]; // kinda like promises in JS
+        for (int i = 0; i < numThreads; i++) {
+            int start = i * threadGroupSize;
+            int end = (i + 1) * threadGroupSize;
+            if (i == numThreads - 1) { // odd number of elements so pick up the slack
+                end = maxElement;
+            }
+            // init the first two elements of the fibonacci sequence
+            fibonacci[start] = calculateNthFibonacci(start);
+            fibonacci[start + 1] = calculateNthFibonacci(start + 1);
+            futureFibTasks[i] = executor.submit(new CalculateFibonacciTask(fibonacci, start, end));
+        }
+        
+        do{ 
+            int doneThreads = 0;
+            for(int i = 0; i < numThreads; i++){
+                if(futureFibTasks[i].isDone()){
+                    doneThreads++;
+                }
+            }
+            if(doneThreads == numThreads){
+                break;
+            }
+        } while(true);
+        
+        System.out.println("Fibonacci sequence calculated");
+        
+        // ---- Draw the fractal ----
+        // TODO: Figure out how to do this in parallel. Might have to do it in reverse order.
+        
         int centerX = WIDTH / 2;
         int centerY = HEIGHT / 2;
         
@@ -82,8 +116,18 @@ public class FibonacciFractalGenerator {
         g.dispose();
 
         saveImage("fibonacci_fractal.png");
+        
     }
 
+    /* F(n) = round( Phi^n / √5 ) provided n ≥ 0
+    modified with an offset to start from 1
+      n:    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, ...
+      fib:  1, 1, 2, 3, 5, 8, 13, 21, 34, 55, ...
+     */
+    private int calculateNthFibonacci(int n) {
+        assert n >= 0;
+        return (int) Math.round(Math.pow(GOLDEN_RATIO, n + 1) / Math.sqrt(5));
+    }
     private int[] calculateFibonacci(int maxElement) {
         int[] fibonacci = new int[maxElement];
         fibonacci[0] = 1;
@@ -92,6 +136,26 @@ public class FibonacciFractalGenerator {
             fibonacci[i] = fibonacci[i - 1] + fibonacci[i - 2];
         }
         return fibonacci;
+    }
+
+    static class CalculateFibonacciTask implements Runnable {
+        private int[] fibonacci;
+        private int start, end;
+
+        public CalculateFibonacciTask(int[] fibonacci, int start, int end) {
+            this.fibonacci = fibonacci;
+            this.start = start;
+            this.end = end;
+        }
+
+        @Override
+        public void run() {
+            for (int i = start + 2; i < end; i++) {
+                fibonacci[i] = fibonacci[i - 1] + fibonacci[i - 2];
+                System.err.println(fibonacci[i]);
+            }
+            
+        }
     }
 
     private void saveImage(String filename) {
@@ -154,6 +218,6 @@ public class FibonacciFractalGenerator {
     }
 
     public static void main(String[] args) {
-        new FibonacciFractalGenerator().generateFractal(40);
+        new FibonacciFractalGenerator().generateFractal(50);
     }
 }
