@@ -218,6 +218,6 @@ public class FibonacciFractalGenerator {
     }
 
     public static void main(String[] args) {
-        new FibonacciFractalGenerator().generateFractal(50);
+        new FibonacciFractalGenerator().generateFractal(40);
     }
 }
