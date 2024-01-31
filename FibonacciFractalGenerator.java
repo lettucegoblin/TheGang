@@ -4,9 +4,11 @@ import java.awt.Color;
 import java.awt.geom.Arc2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.FileWriter;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.math.BigInteger;
 
 public class FibonacciFractalGenerator {
     private static final double GOLDEN_RATIO = (1 + Math.sqrt(5)) / 2; // Phi
@@ -18,7 +20,7 @@ public class FibonacciFractalGenerator {
         int numThreads = Runtime.getRuntime().availableProcessors();
         ExecutorService executor = Executors.newFixedThreadPool(numThreads);
 
-        int[] fibonacci = new int[maxElement];
+        BigInteger[] fibonacci = new BigInteger[maxElement];
         //int[] fibonacci2 = calculateFibonacci(maxElement);
        
         int threadGroupSize = maxElement / numThreads;
@@ -47,7 +49,10 @@ public class FibonacciFractalGenerator {
             }
         } while(true);
         
+        saveFibonacciSequence(fibonacci, "fibonacci_sequence.txt");
+        
         System.out.println("Fibonacci sequence calculated");
+        
         
         // ---- Draw the fractal ----
         // TODO: Figure out how to do this in parallel. Might have to do it in reverse order.
@@ -58,47 +63,48 @@ public class FibonacciFractalGenerator {
         int x = 0;
         int y = 0;
         int angle = 0;
-        int largestFib = fibonacci[maxElement - 1];
-        int largestFib2 = fibonacci[maxElement - 2];
-        double scale = 1.0 * WIDTH / (largestFib2 + largestFib);
+        BigInteger largestFib = fibonacci[maxElement - 1];
+        BigInteger largestFib2 = fibonacci[maxElement - 2];
+        BigInteger sumOfLargestFibs = largestFib2.add(largestFib);
+        double scale = 1.0 * WIDTH / sumOfLargestFibs.doubleValue();
 
         for (int i = 0; i < maxElement; i++) {
-            int currentFib = fibonacci[i];
-            int previousFib = i - 1 < 0 ? 0 : fibonacci[i - 1];
-            int previousPreviousFib = i - 2 < 0 ? 0 : fibonacci[i - 2];
+            BigInteger currentFib = fibonacci[i];
+            BigInteger previousFib = i - 1 < 0 ? 0 : fibonacci[i - 1];
+            BigInteger previousPreviousFib = i - 2 < 0 ? 0 : fibonacci[i - 2];
             
             // Calculate next position and angle
             
-            int[] deltaXY = new int[2];
+            BigInteger[] deltaXY = new BigInteger[2];
             //initialize deltaXY
-            deltaXY[0] = 0;
-            deltaXY[1] = 0;
+            deltaXY[0] = BigInteger.ZERO;
+            deltaXY[1] = BigInteger.ZERO;
             switch(angle){
                 case 0:
-                    deltaXY[0] = -previousPreviousFib;
-                    deltaXY[1] = -currentFib;
+                    deltaXY[0] = previousPreviousFib.negate();
+                    deltaXY[1] = currentFib.negate();
                     break;
                 case 90:
-                    deltaXY[0] = -currentFib;
+                    deltaXY[0] = currentFib.negate();
                     break;
                 case 180:
                     deltaXY[1] = previousFib;
                     break;
                 case 270:
                     deltaXY[0] = previousFib;
-                    deltaXY[1] = -previousPreviousFib;
+                    deltaXY[1] = previousPreviousFib.negate();
                     break;
             }
             
             System.out.println(currentFib + ", " + previousFib + ", " + previousPreviousFib);
             System.out.println("Angle: " + angle);  
             System.out.println("DeltaXY: " + deltaXY[0] + ", " + deltaXY[1]);
-            x += deltaXY[0];
-            y += deltaXY[1];
+            x += deltaXY[0].intValue(); 
+            y += deltaXY[1].intValue(); 
 
             int scaledX = (int)(x * scale) + (int)(centerX);
             int scaledY = (int)(y * scale) + (int)(centerY);
-            int scaledFib = (int)(currentFib * scale);
+            int scaledFib = (int)(currentFib.intValue() * scale);
             if(scaledFib != 0)
                 executor.submit(new FractalDrawingTask(image, scaledX, scaledY, angle, scaledFib, currentFib));
 
@@ -117,16 +123,31 @@ public class FibonacciFractalGenerator {
 
         saveImage("fibonacci_fractal.png");
         
+        
     }
 
+    public void saveFibonacciSequence(BigInteger[] fibonacci, String filename) {
+        try {
+            File file = new File(filename);
+            file.createNewFile();
+            FileWriter writer = new FileWriter(file);
+            for (int i = 0; i < fibonacci.length; i++) {
+                writer.write(fibonacci[i] + "\n");
+            }
+            writer.close();
+            System.out.println("Fibonacci sequence saved as " + filename);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
     /* F(n) = round( Phi^n / √5 ) provided n ≥ 0
     modified with an offset to start from 1
       n:    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, ...
       fib:  1, 1, 2, 3, 5, 8, 13, 21, 34, 55, ...
      */
-    private int calculateNthFibonacci(int n) {
+    private BigInteger calculateNthFibonacci(int n) {
         assert n >= 0;
-        return (int) Math.round(Math.pow(GOLDEN_RATIO, n + 1) / Math.sqrt(5));
+        return (BigInteger) Math.round(Math.pow(GOLDEN_RATIO, n + 1) / Math.sqrt(5));
     }
     private int[] calculateFibonacci(int maxElement) {
         int[] fibonacci = new int[maxElement];
@@ -142,8 +163,8 @@ public class FibonacciFractalGenerator {
         private int[] fibonacci;
         private int start, end;
 
-        public CalculateFibonacciTask(int[] fibonacci, int start, int end) {
-            this.fibonacci = fibonacci;
+        public CalculateFibonacciTask(BigInteger[] fibonacci2, int start, int end) {
+            this.fibonacci = fibonacci2;
             this.start = start;
             this.end = end;
         }
@@ -171,13 +192,13 @@ public class FibonacciFractalGenerator {
         private BufferedImage image;
         private int x, y, angle, scaledFib, currentFib;
 
-        public FractalDrawingTask(BufferedImage image, int x, int y, int angle, int scaledFib, int currentFib) {
+        public FractalDrawingTask(BufferedImage image, int x, int y, int angle, int scaledFib, BigInteger currentFib2) {
             this.image = image;
             this.x = x;
             this.y = y;
             this.angle = angle;
             this.scaledFib = scaledFib;
-            this.currentFib = currentFib;
+            this.currentFib = currentFib2;
         }
 
         @Override
@@ -218,6 +239,6 @@ public class FibonacciFractalGenerator {
     }
 
     public static void main(String[] args) {
-        new FibonacciFractalGenerator().generateFractal(50);
+        new FibonacciFractalGenerator().generateFractal(2000);
     }
 }
