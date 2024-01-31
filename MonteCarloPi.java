@@ -1,3 +1,5 @@
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -9,12 +11,14 @@ public class MonteCarloPi {
     public static void main(String[] args) throws Exception {
         int numThreads = 4; // Number of threads to use
         long numPointsPerThread = 1000000000; // Number of points per thread
+
         ExecutorService executor = Executors.newFixedThreadPool(numThreads);
 
         // Create and submit tasks
-        Future<Long>[] futures = new Future[numThreads];
+        List<Future<Long>> futures = new ArrayList<>(numThreads);
+
         for (int i = 0; i < numThreads; i++) {
-            futures[i] = executor.submit(new MonteCarloTask(numPointsPerThread));
+            futures.set(i, executor.submit(new MonteCarloTask(numPointsPerThread)));
         }
 
         // Collect and sum up results
@@ -31,10 +35,11 @@ public class MonteCarloPi {
         System.out.println("Approximation of Pi: " + pi);
     }
 
-    static class MonteCarloTask implements Callable<Long> {
+    public static class MonteCarloTask implements Callable<Long> {
+
         private final long numPoints;
 
-        MonteCarloTask(long numPoints) {
+        public MonteCarloTask(long numPoints) {
             this.numPoints = numPoints;
         }
 
@@ -42,14 +47,18 @@ public class MonteCarloPi {
         public Long call() {
             long inside = 0;
             Random random = new Random();
+
             for (long i = 0; i < numPoints; i++) {
                 double x = random.nextDouble();
                 double y = random.nextDouble();
+
                 if (x * x + y * y <= 1) {
                     inside++;
                 }
             }
             return inside;
         }
+
     }
+
 }

@@ -19,10 +19,12 @@ public class MandelbrotSetGenerator {
         for (int i = 0; i < numThreads; i++) {
             int startY = i * (HEIGHT / numThreads);
             int endY = (i + 1) * (HEIGHT / numThreads);
+
             executor.submit(new MandelbrotTask(startY, endY));
         }
 
         executor.shutdown();
+
         while (!executor.isTerminated()) {
             // Wait for all threads to finish
         }
@@ -33,6 +35,7 @@ public class MandelbrotSetGenerator {
     private void saveImage(String filename) {
         try {
             ImageIO.write(image, "png", new File(filename));
+
             System.out.println("Mandelbrot Set image saved as " + filename);
         } catch (Exception e) {
             e.printStackTrace();
@@ -40,6 +43,7 @@ public class MandelbrotSetGenerator {
     }
 
     class MandelbrotTask implements Runnable {
+
         private int startY, endY;
 
         public MandelbrotTask(int startY, int endY) {
@@ -51,17 +55,19 @@ public class MandelbrotSetGenerator {
         public void run() {
             for (int y = startY; y < endY; y++) {
                 for (int x = 0; x < WIDTH; x++) {
+                    int iter = MAX_ITER;
                     double zx, zy, cX, cY, tmp;
                     zx = zy = 0;
                     cX = (x - 400) / ZOOM;
                     cY = (y - 300) / ZOOM;
-                    int iter = MAX_ITER;
+
                     while (zx * zx + zy * zy < 4 && iter > 0) {
                         tmp = zx * zx - zy * zy + cX;
                         zy = 2.0 * zx * zy + cY;
                         zx = tmp;
                         iter--;
                     }
+
                     image.setRGB(x, y, iter | (iter << 8));
                 }
             }
@@ -71,4 +77,5 @@ public class MandelbrotSetGenerator {
     public static void main(String[] args) {
         new MandelbrotSetGenerator().generateMandelbrotSet();
     }
+
 }

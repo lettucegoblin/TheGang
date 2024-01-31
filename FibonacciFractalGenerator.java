@@ -9,6 +9,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 public class FibonacciFractalGenerator {
+
     private static final double GOLDEN_RATIO = (1 + Math.sqrt(5)) / 2; // Phi
     private static final int WIDTH = 2000;
     private static final int HEIGHT = 2000;
@@ -20,41 +21,46 @@ public class FibonacciFractalGenerator {
 
         int[] fibonacci = new int[maxElement];
         //int[] fibonacci2 = calculateFibonacci(maxElement);
-       
+
         int threadGroupSize = maxElement / numThreads;
         Future<?>[] futureFibTasks = new Future[numThreads]; // kinda like promises in JS
+
         for (int i = 0; i < numThreads; i++) {
             int start = i * threadGroupSize;
             int end = (i + 1) * threadGroupSize;
+
             if (i == numThreads - 1) { // odd number of elements so pick up the slack
                 end = maxElement;
             }
+
             // init the first two elements of the fibonacci sequence
             fibonacci[start] = calculateNthFibonacci(start);
             fibonacci[start + 1] = calculateNthFibonacci(start + 1);
             futureFibTasks[i] = executor.submit(new CalculateFibonacciTask(fibonacci, start, end));
         }
-        
-        do{ 
+
+        do {
             int doneThreads = 0;
-            for(int i = 0; i < numThreads; i++){
-                if(futureFibTasks[i].isDone()){
+
+            for (int i = 0; i < numThreads; i++) {
+                if (futureFibTasks[i].isDone()) {
                     doneThreads++;
                 }
             }
-            if(doneThreads == numThreads){
+
+            if (doneThreads == numThreads) {
                 break;
             }
-        } while(true);
-        
+        } while (true);
+
         System.out.println("Fibonacci sequence calculated");
-        
+
         // ---- Draw the fractal ----
         // TODO: Figure out how to do this in parallel. Might have to do it in reverse order.
-        
+
         int centerX = WIDTH / 2;
         int centerY = HEIGHT / 2;
-        
+
         int x = 0;
         int y = 0;
         int angle = 0;
@@ -66,14 +72,12 @@ public class FibonacciFractalGenerator {
             int currentFib = fibonacci[i];
             int previousFib = i - 1 < 0 ? 0 : fibonacci[i - 1];
             int previousPreviousFib = i - 2 < 0 ? 0 : fibonacci[i - 2];
-            
+
             // Calculate next position and angle
-            
+
             int[] deltaXY = new int[2];
-            //initialize deltaXY
-            deltaXY[0] = 0;
-            deltaXY[1] = 0;
-            switch(angle){
+
+            switch (angle) {
                 case 0:
                     deltaXY[0] = -previousPreviousFib;
                     deltaXY[1] = -currentFib;
@@ -89,17 +93,19 @@ public class FibonacciFractalGenerator {
                     deltaXY[1] = -previousPreviousFib;
                     break;
             }
-            
+
             System.out.println(currentFib + ", " + previousFib + ", " + previousPreviousFib);
-            System.out.println("Angle: " + angle);  
+            System.out.println("Angle: " + angle);
             System.out.println("DeltaXY: " + deltaXY[0] + ", " + deltaXY[1]);
+
             x += deltaXY[0];
             y += deltaXY[1];
 
-            int scaledX = (int)(x * scale) + (int)(centerX);
-            int scaledY = (int)(y * scale) + (int)(centerY);
-            int scaledFib = (int)(currentFib * scale);
-            if(scaledFib != 0)
+            int scaledX = (int) (x * scale) + (int) (centerX);
+            int scaledY = (int) (y * scale) + (int) (centerY);
+            int scaledFib = (int) (currentFib * scale);
+
+            if (scaledFib != 0)
                 executor.submit(new FractalDrawingTask(image, scaledX, scaledY, angle, scaledFib, currentFib));
 
             angle += 90;
@@ -107,16 +113,18 @@ public class FibonacciFractalGenerator {
         }
 
         executor.shutdown();
+
         while (!executor.isTerminated()) {
             // Wait for all threads to finish
         }
-        Graphics2D g = (Graphics2D) image.getGraphics();
-        g.setColor(Color.magenta);
-        g.fillRect(WIDTH / 2, HEIGHT /2, 1, 1);
-        g.dispose();
+
+        Graphics2D graphics = (Graphics2D) image.getGraphics();
+
+        graphics.setColor(Color.magenta);
+        graphics.fillRect(WIDTH / 2, HEIGHT / 2, 1, 1);
+        graphics.dispose();
 
         saveImage("fibonacci_fractal.png");
-        
     }
 
     /* F(n) = round( Phi^n / √5 ) provided n ≥ 0
@@ -126,21 +134,28 @@ public class FibonacciFractalGenerator {
      */
     private int calculateNthFibonacci(int n) {
         assert n >= 0;
+
         return (int) Math.round(Math.pow(GOLDEN_RATIO, n + 1) / Math.sqrt(5));
     }
+
     private int[] calculateFibonacci(int maxElement) {
         int[] fibonacci = new int[maxElement];
+
         fibonacci[0] = 1;
         fibonacci[1] = 1;
+
         for (int i = 2; i < maxElement; i++) {
             fibonacci[i] = fibonacci[i - 1] + fibonacci[i - 2];
         }
+
         return fibonacci;
     }
 
     static class CalculateFibonacciTask implements Runnable {
-        private int[] fibonacci;
-        private int start, end;
+
+        private final int[] fibonacci;
+        private final int start;
+        private final int end;
 
         public CalculateFibonacciTask(int[] fibonacci, int start, int end) {
             this.fibonacci = fibonacci;
@@ -154,22 +169,28 @@ public class FibonacciFractalGenerator {
                 fibonacci[i] = fibonacci[i - 1] + fibonacci[i - 2];
                 System.err.println(fibonacci[i]);
             }
-            
         }
+
     }
 
-    private void saveImage(String filename) {
+    private void saveImage(String fileName) {
         try {
-            ImageIO.write(image, "png", new File(filename));
-            System.out.println("Fibonacci fractal image saved as " + filename);
+            ImageIO.write(image, "png", new File(fileName));
+
+            System.out.println("Fibonacci fractal image saved as " + fileName);
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
     static class FractalDrawingTask implements Runnable {
-        private BufferedImage image;
-        private int x, y, angle, scaledFib, currentFib;
+
+        private final BufferedImage image;
+        private final int x;
+        private final int y;
+        private final int angle;
+        private final int scaledFib;
+        private final int currentFib;
 
         public FractalDrawingTask(BufferedImage image, int x, int y, int angle, int scaledFib, int currentFib) {
             this.image = image;
@@ -182,42 +203,48 @@ public class FibonacciFractalGenerator {
 
         @Override
         public void run() {
-            Graphics2D g = (Graphics2D) image.getGraphics();
-            g.setColor(Color.BLUE);
-            synchronized (image) {  
+            Graphics2D graphics = (Graphics2D) image.getGraphics();
+            graphics.setColor(Color.BLUE);
+
+            synchronized (image) {
                 // draw a dot at the center of the image
-                              
                 double arcX = x;
                 double arcY = y;
-                if(angle == 0){
-                    arcX = x - scaledFib;
-                    arcY = y;
-                    g.setColor(Color.GRAY);
-                } else if(angle == 90){
-                    arcX = x;
-                    arcY = y;
-                    g.setColor(Color.WHITE);
-                } else if(angle == 180){
-                    arcX = x;
-                    arcY = y - scaledFib;
-                    g.setColor(Color.ORANGE);
-                } else if(angle == 270){
-                    arcX = x - scaledFib;
-                    arcY = y - scaledFib;
-                    g.setColor(Color.GREEN);
-                }
-                g.drawRect(x, y, scaledFib, scaledFib);
-                g.setColor(Color.RED);
-                Arc2D arc = new Arc2D.Double(arcX, arcY, 2 * scaledFib - 1, 2 * scaledFib - 1, angle, 90, Arc2D.OPEN);
-                g.draw(arc);
 
-                g.drawString(Integer.toString(currentFib), x + scaledFib/2, y + scaledFib/2);                
+                if (angle == 0) {
+                    arcX = x - scaledFib;
+                    arcY = y;
+                    graphics.setColor(Color.GRAY);
+                } else if (angle == 90) {
+                    arcX = x;
+                    arcY = y;
+                    graphics.setColor(Color.WHITE);
+                } else if (angle == 180) {
+                    arcX = x;
+                    arcY = y - scaledFib;
+                    graphics.setColor(Color.ORANGE);
+                } else if (angle == 270) {
+                    arcX = x - scaledFib;
+                    arcY = y - scaledFib;
+                    graphics.setColor(Color.GREEN);
+                }
+
+                graphics.drawRect(x, y, scaledFib, scaledFib);
+                graphics.setColor(Color.RED);
+
+                Arc2D arc = new Arc2D.Double(arcX, arcY, 2 * scaledFib - 1, 2 * scaledFib - 1, angle, 90, Arc2D.OPEN);
+
+                graphics.draw(arc);
+
+                graphics.drawString(Integer.toString(currentFib), x + scaledFib / 2, y + scaledFib / 2);
             }
-            g.dispose();
+
+            graphics.dispose();
         }
     }
 
     public static void main(String[] args) {
         new FibonacciFractalGenerator().generateFractal(40);
     }
+
 }
