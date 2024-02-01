@@ -13,6 +13,8 @@ public class MandelbrotSetGenerator {
     private BufferedImage image = new BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_RGB);
 
     public void generateMandelbrotSet() {
+        long currentTime = System.currentTimeMillis();
+
         int numThreads = Runtime.getRuntime().availableProcessors();
         ExecutorService executor = Executors.newFixedThreadPool(numThreads);
 
@@ -30,6 +32,8 @@ public class MandelbrotSetGenerator {
         }
 
         saveImage("mandelbrot_set.png");
+
+        System.out.println("Image took " + (System.currentTimeMillis() - currentTime) + "ms to generate.");
     }
 
     private void saveImage(String filename) {

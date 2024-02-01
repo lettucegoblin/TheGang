@@ -55,6 +55,8 @@ public class FibonacciFractalGenerator {
 
         System.out.println("Fibonacci sequence calculated");
 
+        long currentTime = System.currentTimeMillis();
+
         // ---- Draw the fractal ----
         // TODO: Figure out how to do this in parallel. Might have to do it in reverse order.
 
@@ -125,6 +127,8 @@ public class FibonacciFractalGenerator {
         graphics.dispose();
 
         saveImage("fibonacci_fractal.png");
+
+        System.out.println("Image took " + (System.currentTimeMillis() - currentTime) + "ms to generate.");
     }
 
     /* F(n) = round( Phi^n / √5 ) provided n ≥ 0

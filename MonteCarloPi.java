@@ -9,6 +9,8 @@ import java.util.Random;
 public class MonteCarloPi {
 
     public static void main(String[] args) throws Exception {
+        long currentTime = System.currentTimeMillis();
+
         int numThreads = 4; // Number of threads to use
         long numPointsPerThread = 1000000000; // Number of points per thread
 
@@ -33,6 +35,8 @@ public class MonteCarloPi {
         // Calculate Pi approximation
         double pi = 4.0 * totalInside / (numThreads * numPointsPerThread);
         System.out.println("Approximation of Pi: " + pi);
+
+        System.out.println("Image took " + (System.currentTimeMillis() - currentTime) + "ms to generate.");
     }
 
     public static class MonteCarloTask implements Callable<Long> {
