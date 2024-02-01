@@ -1,9 +1,9 @@
 import javax.imageio.ImageIO;
-import java.awt.Graphics2D;
-import java.awt.Color;
+import java.awt.*;
 import java.awt.geom.Arc2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.math.BigInteger;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -103,9 +103,9 @@ public class FibonacciFractalGenerator {
             x += deltaXY[0];
             y += deltaXY[1];
 
-            int scaledX = (int) (x * scale) + (int) (centerX);
-            int scaledY = (int) (y * scale) + (int) (centerY);
-            int scaledFib = (int) (currentFib * scale);
+            double scaledX = (x * scale) + (centerX);
+            double scaledY = (y * scale) + (centerY);
+            double scaledFib = (currentFib * scale);
 
             if (scaledFib != 0)
                 executor.submit(new FractalDrawingTask(image, scaledX, scaledY, angle, scaledFib, currentFib));
@@ -190,13 +190,13 @@ public class FibonacciFractalGenerator {
     static class FractalDrawingTask implements Runnable {
 
         private final BufferedImage image;
-        private final int x;
-        private final int y;
+        private final double x;
+        private final double y;
         private final int angle;
-        private final int scaledFib;
-        private final int currentFib;
+        private final double scaledFib;
+        private final double currentFib;
 
-        public FractalDrawingTask(BufferedImage image, int x, int y, int angle, int scaledFib, int currentFib) {
+        public FractalDrawingTask(BufferedImage image, double x, double y, int angle, double scaledFib, double currentFib) {
             this.image = image;
             this.x = x;
             this.y = y;
@@ -233,22 +233,31 @@ public class FibonacciFractalGenerator {
                     graphics.setColor(Color.GREEN);
                 }
 
-                graphics.drawRect(x, y, scaledFib, scaledFib);
+                Shape shape = new BigIntRectangle(toBigInt(x), toBigInt(y), toBigInt(scaledFib), toBigInt(scaledFib));
+
+                graphics.draw(shape);
                 graphics.setColor(Color.RED);
 
                 Arc2D arc = new Arc2D.Double(arcX, arcY, 2 * scaledFib - 1, 2 * scaledFib - 1, angle, 90, Arc2D.OPEN);
 
                 graphics.draw(arc);
 
-                graphics.drawString(Integer.toString(currentFib), x + scaledFib / 2, y + scaledFib / 2);
+                graphics.drawString(Double.toString(currentFib), (int) (x + scaledFib / 2), (int) (y + scaledFib / 2));
             }
 
             graphics.dispose();
         }
     }
 
+    public static BigInteger toBigInt(int number) {
+        return BigInteger.valueOf(number);
+    }
+
+    public static BigInteger toBigInt(double number) {
+        return BigInteger.valueOf((long) number);
+    }
     public static void main(String[] args) {
-        new FibonacciFractalGenerator().generateFractal(40);
+        new FibonacciFractalGenerator().generateFractal(20);
     }
 
 }
